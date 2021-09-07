@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -31,6 +32,8 @@ var quoteInCommand = cli.Command{
 		},
 		confTargetFlag,
 		verboseFlag,
+		privateFlag,
+		routeHintsFlag,
 	},
 	Action: quoteIn,
 }
@@ -53,9 +56,24 @@ func quoteIn(ctx *cli.Context) error {
 	}
 	defer cleanup()
 
+	var hints []*looprpc.RouteHint
+
+	// private and routehints are mutually exclusive as setting private
+	// means we retrieve our own routehints from the connected node
+	if ctx.IsSet(privateFlag.Name) && ctx.IsSet(routeHintsFlag.Name) {
+		return fmt.Errorf("private and route_hints both set")
+	} else if ctx.IsSet(routeHintsFlag.Name) {
+		err = json.Unmarshal([]byte(ctx.String(routeHintsFlag.Name)), &hints)
+		if err != nil {
+			return fmt.Errorf("unable to parse json: %v", err)
+		}
+	}
+
 	quoteReq := &looprpc.QuoteRequest{
-		Amt:        int64(amt),
-		ConfTarget: int32(ctx.Uint64("conf_target")),
+		Amt:              int64(amt),
+		ConfTarget:       int32(ctx.Uint64("conf_target")),
+		LoopInRouteHints: hints,
+		Private:          ctx.Bool(privateFlag.Name),
 	}
 
 	if ctx.IsSet(lastHopFlag.Name) {

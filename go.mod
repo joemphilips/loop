@@ -20,6 +20,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/urfave/cli v1.20.0
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/grpc v1.38.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/macaroon-bakery.v2 v2.0.1

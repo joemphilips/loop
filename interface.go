@@ -207,6 +207,8 @@ type LoopInRequest struct {
 	// initiated the swap (loop CLI, autolooper, LiT UI and so on) and is
 	// appended to the user agent string.
 	Initiator string
+
+	Private bool
 }
 
 // LoopInTerms are the server terms on which it executes loop in swaps.

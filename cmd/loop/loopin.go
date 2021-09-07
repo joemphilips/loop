@@ -36,6 +36,10 @@ var (
 		Name:  "route_hints",
 		Usage: "",
 	}
+	privateFlag = cli.BoolFlag{
+		Name:  "private",
+		Usage: "",
+	}
 
 	loopInCommand = cli.Command{
 		Name:      "in",
@@ -67,6 +71,7 @@ var (
 			labelFlag,
 			verboseFlag,
 			routeHints,
+			privateFlag,
 		},
 		Action: loopIn,
 	}
@@ -140,6 +145,7 @@ func loopIn(ctx *cli.Context) error {
 		ExternalHtlc:     external,
 		LoopInLastHop:    lastHop,
 		LoopInRouteHints: hints,
+		Private:          ctx.Bool("private"),
 	}
 
 	quote, err := client.GetLoopInQuote(context.Background(), quoteReq)

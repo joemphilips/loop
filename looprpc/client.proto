@@ -264,6 +264,8 @@ message LoopInRequest {
     triggering the swap (loop CLI, autolooper, LiT UI, other 3rd party UI).
     */
     string initiator = 8;
+
+    repeated RouteHint route_hints = 9;
 }
 
 message SwapResponse {
@@ -580,6 +582,8 @@ message QuoteRequest {
     Optional route hints to reach the destination through private channels.
     */
     repeated RouteHint loop_in_route_hints = 6;
+
+    bool private = 7;
 }
 
 message InQuoteResponse {
@@ -609,6 +613,8 @@ message InQuoteResponse {
     The confirmation target to be used to publish the on-chain HTLC.
     */
     int32 conf_target = 6;
+
+    repeated RouteHint route_hints = 7;
 }
 
 message OutQuoteResponse {

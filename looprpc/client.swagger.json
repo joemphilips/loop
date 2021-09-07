@@ -224,6 +224,12 @@
             "required": false,
             "type": "string",
             "format": "byte"
+          },
+          {
+            "name": "private",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -344,6 +350,12 @@
             "required": false,
             "type": "string",
             "format": "byte"
+          },
+          {
+            "name": "private",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -560,6 +572,12 @@
           "type": "integer",
           "format": "int32",
           "description": "The confirmation target to be used to publish the on-chain HTLC."
+        },
+        "route_hints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/looprpcRouteHint"
+          }
         }
       }
     },
@@ -752,6 +770,12 @@
         "initiator": {
           "type": "string",
           "description": "An optional identification string that will be appended to the user agent\nstring sent to the server to give information about the usage of loop. This\ninitiator part is meant for user interfaces to add their name to give the\nfull picture of the binary used (loopd, LiT) and the method used for\ntriggering the swap (loop CLI, autolooper, LiT UI, other 3rd party UI)."
+        },
+        "route_hints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/looprpcRouteHint"
+          }
         }
       }
     },

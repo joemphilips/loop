@@ -494,8 +494,13 @@ func (s *swapClientServer) GetLoopInQuote(ctx context.Context,
 
 		lastHop = &lastHopVertex
 	}
-
-	routeHints, err := unmarshallRouteHints(req.LoopInRouteHints)
+	var routeHints [][]zpay32.HopHint
+	if req.Private {
+		routeHints, err = loop.SelectHopHints(ctx, s.lnd,
+			btcutil.Amount(req.Amt), 20)
+	} else {
+		routeHints, err = unmarshallRouteHints(req.LoopInRouteHints)
+	}
 	if err != nil {
 		return nil, err
 	}

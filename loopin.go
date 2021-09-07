@@ -23,6 +23,7 @@ import (
 	"github.com/lightningnetwork/lnd/lntypes"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/lightningnetwork/lnd/zpay32"
 )
 
 var (
@@ -80,6 +81,16 @@ func newLoopInSwap(globalCtx context.Context, cfg *swapConfig,
 	currentHeight int32, request *LoopInRequest) (*loopInInitResult,
 	error) {
 
+	var err error
+	var routeHints [][]zpay32.HopHint
+	if request.Private {
+		routeHints, err = SelectHopHints(globalCtx, cfg.lnd,
+			request.Amount, 20)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Request current server loop in terms and use these to calculate the
 	// swap fee that we should subtract from the swap amount in the payment
 	// request that we send to the server. We pass nil as optional route
@@ -89,10 +100,10 @@ func newLoopInSwap(globalCtx context.Context, cfg *swapConfig,
 	// route hints.
 	quote, err := cfg.server.GetLoopInQuote(
 		globalCtx, request.Amount, cfg.lnd.NodePubkey, request.LastHop,
-		nil,
+		routeHints,
 	)
 	if err != nil {
-		return nil, wrapGrpcError("loop in terms", err)
+		return nil, err
 	}
 
 	swapFee := quote.SwapFee
@@ -129,10 +140,11 @@ func newLoopInSwap(globalCtx context.Context, cfg *swapConfig,
 	// Create the swap invoice in lnd.
 	_, swapInvoice, err := cfg.lnd.Client.AddInvoice(
 		globalCtx, &invoicesrpc.AddInvoiceData{
-			Preimage: &swapPreimage,
-			Value:    lnwire.NewMSatFromSatoshis(swapInvoiceAmt),
-			Memo:     "swap",
-			Expiry:   3600 * 24 * 365,
+			Preimage:   &swapPreimage,
+			Value:      lnwire.NewMSatFromSatoshis(swapInvoiceAmt),
+			Memo:       "swap",
+			Expiry:     3600 * 24 * 365,
+			RouteHints: routeHints,
 		},
 	)
 	if err != nil {
@@ -148,10 +160,11 @@ func newLoopInSwap(globalCtx context.Context, cfg *swapConfig,
 	log.Infof("Creating probe invoice %v", probeHash)
 	probeInvoice, err := cfg.lnd.Invoices.AddHoldInvoice(
 		globalCtx, &invoicesrpc.AddInvoiceData{
-			Hash:   &probeHash,
-			Value:  lnwire.NewMSatFromSatoshis(swapInvoiceAmt),
-			Memo:   "loop in probe",
-			Expiry: 3600,
+			Hash:       &probeHash,
+			Value:      lnwire.NewMSatFromSatoshis(swapInvoiceAmt),
+			Memo:       "loop in probe",
+			Expiry:     3600,
+			RouteHints: routeHints,
 		},
 	)
 	if err != nil {
