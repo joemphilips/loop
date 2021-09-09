@@ -32,13 +32,16 @@ var (
 			"with our reserved prefix: %v.",
 			labels.MaxLength, labels.Reserved),
 	}
-	routeHints = cli.StringFlag{
-		Name:  "route_hints",
-		Usage: "",
+	routeHintsFlag = cli.StringSliceFlag{
+		Name: "route_hints",
+		Usage: "Route hints that can each be individually used " +
+			"to assist in reaching the invoice's destination.",
 	}
 	privateFlag = cli.BoolFlag{
-		Name:  "private",
-		Usage: "",
+		Name: "private",
+		Usage: "Indicates the offchain destination is private, " +
+			"or only reachable via private channels. Route hints " +
+			"will be automatically included",
 	}
 
 	loopInCommand = cli.Command{
@@ -70,7 +73,7 @@ var (
 			lastHopFlag,
 			labelFlag,
 			verboseFlag,
-			routeHints,
+			routeHintsFlag,
 			privateFlag,
 		},
 		Action: loopIn,
@@ -132,10 +135,15 @@ func loopIn(ctx *cli.Context) error {
 		lastHop = lastHopVertex[:]
 	}
 	var hints []*looprpc.RouteHint
-	if ctx.IsSet(routeHints.Name) {
-		err = json.Unmarshal([]byte(ctx.String(routeHints.Name)), &hints)
+
+	// private and routehints are mutually exclusive as setting private
+	// means we retrieve our own routehints from the connected node
+	if ctx.IsSet(privateFlag.Name) && ctx.IsSet(routeHintsFlag.Name) {
+		return fmt.Errorf("private and route_hints both set")
+	} else if ctx.IsSet(routeHintsFlag.Name) {
+		err = json.Unmarshal([]byte(ctx.String(routeHintsFlag.Name)), &hints)
 		if err != nil {
-			fmt.Errorf("unable to parse json: %v", err)
+			return fmt.Errorf("unable to parse json: %v", err)
 		}
 	}
 
@@ -145,7 +153,7 @@ func loopIn(ctx *cli.Context) error {
 		ExternalHtlc:     external,
 		LoopInLastHop:    lastHop,
 		LoopInRouteHints: hints,
-		Private:          ctx.Bool("private"),
+		Private:          ctx.Bool(privateFlag.Name),
 	}
 
 	quote, err := client.GetLoopInQuote(context.Background(), quoteReq)
@@ -182,6 +190,7 @@ func loopIn(ctx *cli.Context) error {
 		Label:          label,
 		Initiator:      defaultInitiator,
 		LastHop:        lastHop,
+		RouteHints:     quote.RouteHints,
 	}
 
 	resp, err := client.LoopIn(context.Background(), req)
