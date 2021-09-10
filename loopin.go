@@ -23,6 +23,7 @@ import (
 	"github.com/lightningnetwork/lnd/lntypes"
 	"github.com/lightningnetwork/lnd/lnwallet/chainfee"
 	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/zpay32"
 )
 
@@ -81,11 +82,16 @@ func newLoopInSwap(globalCtx context.Context, cfg *swapConfig,
 	currentHeight int32, request *LoopInRequest) (*loopInInitResult,
 	error) {
 
+	var include_nodes map[route.Vertex]struct{}
+	if request.LastHop != nil {
+		include_nodes = make(map[route.Vertex]struct{})
+	}
+
 	var err error
 	var routeHints [][]zpay32.HopHint
 	if request.Private {
 		routeHints, err = SelectHopHints(globalCtx, cfg.lnd,
-			request.Amount, 20)
+			request.Amount, 20, include_nodes)
 		if err != nil {
 			return nil, err
 		}

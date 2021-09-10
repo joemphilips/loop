@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	"github.com/lightninglabs/lndclient"
 	"github.com/lightningnetwork/lnd/lnwire"
+	"github.com/lightningnetwork/lnd/routing/route"
 	"github.com/lightningnetwork/lnd/zpay32"
 )
 
@@ -66,9 +67,8 @@ func chanCanBeHopHint(ctx context.Context, lnd *lndclient.LndServices, channels 
 }
 
 func SelectHopHints(ctx context.Context, lnd *lndclient.LndServices, amtMSat btcutil.Amount,
-	numMaxHophints int) ([][]zpay32.HopHint, error) {
+	numMaxHophints int, include_nodes map[route.Vertex]struct{}) ([][]zpay32.HopHint, error) {
 
-	// openChannels, err := lnd.Client.ListChannels(ctx, true, true)
 	openChannels, err := lnd.Client.ListChannels(ctx)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,13 @@ func SelectHopHints(ctx context.Context, lnd *lndclient.LndServices, amtMSat btc
 			continue
 		}
 
-		// TODO: HARSHA cache this
+		// If include_nodes is set, we'll only add channels with peers in include_node.
+		// This is done to respect the last_hop parameter
+		if _, ok := include_nodes[channel.PubKeyBytes]; include_nodes != nil && !ok {
+			continue
+		}
+
+		// TODO: cache for increased performance
 		chanInfo, err := lnd.Client.GetChanInfo(ctx, channel.ChannelID)
 		if err != nil {
 			return nil, err
@@ -99,7 +105,16 @@ func SelectHopHints(ctx context.Context, lnd *lndclient.LndServices, amtMSat btc
 			continue
 		}
 
+		// Retrieve extra info for each channel not available in listChannels
+		chanInfo, err = lnd.Client.GetChanInfo(ctx, channel.ChannelID)
+		if err != nil {
+			return nil, err
+		}
+
 		nodeID, err := btcec.ParsePubKey(channel.PubKeyBytes[:], btcec.S256())
+		if err != nil {
+			return nil, err
+		}
 
 		// Now that we now this channel use usable, add it as a hop
 		// hint and the indexes we'll use later.

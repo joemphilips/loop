@@ -483,26 +483,41 @@ func (s *swapClientServer) GetLoopInQuote(ctx context.Context,
 		return nil, err
 	}
 
+	var routeHints [][]zpay32.HopHint
+	haveRouteHints := len(req.LoopInRouteHints) != 0
+	haveLastHop := req.LoopInLastHop != nil
 	var lastHop *route.Vertex
-	if req.LoopInLastHop != nil {
+
+	switch {
+	// private and routehints are mutually exclusive as setting private
+	// means we retrieve our own routehints from the connected node
+	case haveRouteHints && req.Private:
+		return nil, fmt.Errorf("private and route_hints both set")
+	case haveLastHop:
 		lastHopVertex, err := route.NewVertexFromBytes(
 			req.LoopInLastHop,
 		)
+		lastHop = &lastHopVertex
 		if err != nil {
 			return nil, err
 		}
-
-		lastHop = &lastHopVertex
-	}
-	var routeHints [][]zpay32.HopHint
-	if req.Private {
+	case req.Private:
+		// If last_hop is set, we'll only add channels with peers
+		// set to the last_hop parameter
+		var include_nodes map[route.Vertex]struct{}
+		if req.LoopInLastHop != nil {
+			include_nodes = make(map[route.Vertex]struct{})
+		}
 		routeHints, err = loop.SelectHopHints(ctx, s.lnd,
-			btcutil.Amount(req.Amt), 20)
-	} else {
+			btcutil.Amount(req.Amt), 20, include_nodes)
+		if err != nil {
+			return nil, err
+		}
+	case haveRouteHints:
 		routeHints, err = unmarshallRouteHints(req.LoopInRouteHints)
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	quote, err := s.impl.LoopInQuote(ctx, &loop.LoopInQuoteRequest{
