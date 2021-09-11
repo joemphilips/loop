@@ -171,7 +171,7 @@ can do so by either increasing the overall budget amount, or by increasing the
 start time to the present. For example, if you want to set your autolooper to 
 have a budget of 100k sats for the month, you could set the following:
 ```
-loop setparams --autobudget=100000 --autostart={beginning of month ts}
+loop setparams --autobudget=100000 --budgetstart={beginning of month ts}
 ```
 
 ## Dispatch Control
